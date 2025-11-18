@@ -263,7 +263,7 @@ export default function DosyalarPage() {
       const progressData = {
         case_id: selectedCaseForProgress.id,
         progress_type: progressForm.progress_type,
-        custom_description: progressForm.progress_type === 'diğer' ? progressForm.custom_description : null,
+        custom_description: null,
         progress_date: progressForm.progress_date,
         notes: progressForm.notes || null,
         created_by: user.id
@@ -1492,22 +1492,6 @@ export default function DosyalarPage() {
                 </SelectContent>
               </Select>
             </div>
-
-            {progressForm.progress_type === 'diğer' && (
-              <div className="space-y-2">
-                <Label htmlFor="custom_description" className="text-sm font-medium text-gray-700">
-                  Açıklama *
-                </Label>
-                <Input
-                  id="custom_description"
-                  value={progressForm.custom_description}
-                  onChange={(e) => setProgressForm({...progressForm, custom_description: e.target.value})}
-                  required
-                  className="h-11"
-                  placeholder="Özel safahat açıklaması"
-                />
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="progress_date" className="text-sm font-medium text-gray-700">
