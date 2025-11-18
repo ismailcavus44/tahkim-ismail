@@ -197,11 +197,11 @@ export default function MuvekkillerPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Müvekkil Yönetimi</h1>
-          <p className="text-gray-600">Müvekkil bilgilerini yönetin</p>
+          <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900 text-center md:text-left">Müvekkil Yönetimi</h1>
+          <p className="text-xs md:text-sm text-gray-600 mt-0.5 hidden md:block">Müvekkil bilgilerini yönetin</p>
         </div>
         <Dialog open={clientDialogOpen} onOpenChange={(open) => {
           setClientDialogOpen(open)
@@ -212,9 +212,10 @@ export default function MuvekkillerPage() {
         }}>
           <DialogTrigger asChild>
             {!isReadOnly && (
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
-                Yeni Müvekkil
+                <span className="hidden xs:inline">Yeni Müvekkil</span>
+                <span className="xs:hidden">Ekle</span>
               </Button>
             )}
           </DialogTrigger>
@@ -310,12 +311,12 @@ export default function MuvekkillerPage() {
 
         {/* Müvekkil Dosya Bilgileri Modal */}
         <Dialog open={clientInfoDialogOpen} onOpenChange={setClientInfoDialogOpen}>
-          <DialogContent className="w-[98vw] max-w-none max-h-[80vh] flex flex-col">
+          <DialogContent className="w-[95vw] sm:w-[90vw] md:max-w-4xl max-h-[85vh] flex flex-col p-4 md:p-6">
             <DialogHeader className="flex-shrink-0">
-              <DialogTitle className="text-xl font-semibold">
+              <DialogTitle className="text-base md:text-xl font-semibold">
                 {selectedClientForInfo?.full_name} - Dosya Listesi
               </DialogTitle>
-              <DialogDescription className="text-base">
+              <DialogDescription className="text-xs md:text-sm">
                 Bu müvekkile kayıtlı tüm dosyalar
               </DialogDescription>
             </DialogHeader>
@@ -324,61 +325,101 @@ export default function MuvekkillerPage() {
               <div className="flex-1 overflow-hidden flex flex-col">
                 {/* Dosya Listesi */}
                 <div className="flex-1 overflow-hidden">
-                  <h3 className="font-semibold text-lg mb-3">
+                  <h3 className="font-semibold text-sm md:text-lg mb-2 md:mb-3">
                     Dosyalar ({selectedClientForInfo.cases?.length || 0})
                   </h3>
                   
                   {selectedClientForInfo.cases && selectedClientForInfo.cases.length > 0 ? (
-                    <div className="h-full border rounded-lg">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[25%]">Dosya Başlığı</TableHead>
-                            <TableHead className="w-[20%]">Dosya No</TableHead>
-                            <TableHead className="w-[20%]">Araç Plakası</TableHead>
-                            <TableHead className="w-[15%]">Durum</TableHead>
-                            <TableHead className="w-[20%]">Oluşturulma Tarihi</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {selectedClientForInfo.cases.map((caseItem) => (
-                            <TableRow key={caseItem.id} className="hover:bg-gray-50">
-                              <TableCell className="font-medium">{caseItem.title}</TableCell>
-                              <TableCell>
-                                {caseItem.case_no ? (
+                    <div className="h-full overflow-auto">
+                      {/* Desktop Tablo */}
+                      <div className="hidden md:block border rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Dosya Başlığı</TableHead>
+                              <TableHead>Dosya No</TableHead>
+                              <TableHead>Araç Plakası</TableHead>
+                              <TableHead>Durum</TableHead>
+                              <TableHead>Oluşturulma Tarihi</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {selectedClientForInfo.cases.map((caseItem) => (
+                              <TableRow key={caseItem.id} className="hover:bg-gray-50">
+                                <TableCell className="font-medium">{caseItem.title}</TableCell>
+                                <TableCell>
+                                  {caseItem.case_no ? (
+                                    <button
+                                      onClick={() => handleShowCaseDetail(caseItem)}
+                                      className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
+                                    >
+                                      {caseItem.case_no}
+                                    </button>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                                    {caseItem.vehicle_plate || '-'}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={caseItem.status === 'open' ? 'default' : 'secondary'}>
+                                    {caseItem.status === 'open' ? 'Açık' : 'Kapalı'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {new Date(caseItem.created_at).toLocaleDateString('tr-TR')}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      {/* Mobil Kart Görünümü */}
+                      <div className="md:hidden space-y-2">
+                        {selectedClientForInfo.cases.map((caseItem) => (
+                          <div key={caseItem.id} className="border rounded-lg p-3 bg-white">
+                            <div className="flex items-start justify-between mb-2">
+                              <h4 className="font-medium text-sm flex-1">{caseItem.title}</h4>
+                              <Badge variant={caseItem.status === 'open' ? 'default' : 'secondary'} className="text-xs ml-2 flex-shrink-0">
+                                {caseItem.status === 'open' ? 'Açık' : 'Kapalı'}
+                              </Badge>
+                            </div>
+                            <div className="space-y-1 text-xs">
+                              {caseItem.case_no && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-500 min-w-[70px]">Dosya No:</span>
                                   <button
                                     onClick={() => handleShowCaseDetail(caseItem)}
-                                    className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
+                                    className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
                                   >
                                     {caseItem.case_no}
                                   </button>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                                  {caseItem.vehicle_plate || '-'}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={caseItem.status === 'open' ? 'default' : 'secondary'}>
-                                  {caseItem.status === 'open' ? 'Açık' : 'Kapalı'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {new Date(caseItem.created_at).toLocaleDateString('tr-TR')}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                                </div>
+                              )}
+                              {caseItem.vehicle_plate && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-500 min-w-[70px]">Plaka:</span>
+                                  <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">{caseItem.vehicle_plate}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500 min-w-[70px]">Tarih:</span>
+                                <span className="text-gray-900">{new Date(caseItem.created_at).toLocaleDateString('tr-TR')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : (
-                    <div className="text-center py-12">
-                      <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-500 text-lg">Bu müvekkile henüz dosya kayıtlı değil</p>
-                      <p className="text-gray-400 text-sm mt-2">Dosyalar sayfasından yeni dosya ekleyebilirsiniz</p>
+                    <div className="text-center py-8 md:py-12">
+                      <FileText className="h-12 w-12 md:h-16 md:w-16 text-gray-400 mx-auto mb-3 md:mb-4" />
+                      <p className="text-gray-500 text-sm md:text-base">Bu müvekkile henüz dosya kayıtlı değil</p>
+                      <p className="text-gray-400 text-xs md:text-sm mt-2">Dosyalar sayfasından yeni dosya ekleyebilirsiniz</p>
                     </div>
                   )}
                 </div>
@@ -389,28 +430,26 @@ export default function MuvekkillerPage() {
 
         {/* Dosya Detay Modal */}
         <Dialog open={caseDetailDialogOpen} onOpenChange={setCaseDetailDialogOpen}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="w-[95vw] sm:w-[90vw] md:max-w-3xl max-h-[85vh] overflow-y-auto p-4 md:p-6">
             <DialogHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div>
-                  <DialogTitle className="text-xl font-semibold">
+                  <DialogTitle className="text-base md:text-xl font-semibold">
                     Dosya Detayları
                   </DialogTitle>
-                  <DialogDescription className="text-base">
+                  <DialogDescription className="text-xs md:text-sm">
                     Dosya bilgileri ve durumu
                   </DialogDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                    onClick={() => setCaseProgressDialogOpen(true)}
-                  >
-                    <History className="h-4 w-4" />
-                    Safahat Geçmişi
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 text-xs md:text-sm w-full sm:w-auto"
+                  onClick={() => setCaseProgressDialogOpen(true)}
+                >
+                  <History className="h-3 w-3 md:h-4 md:w-4" />
+                  Safahat Geçmişi
+                </Button>
               </div>
             </DialogHeader>
             
@@ -510,19 +549,19 @@ export default function MuvekkillerPage() {
 
         {/* Safahat Geçmişi Modal */}
         <Dialog open={caseProgressDialogOpen} onOpenChange={setCaseProgressDialogOpen}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="w-[95vw] sm:w-[90vw] md:max-w-3xl max-h-[85vh] overflow-y-auto p-4 md:p-6">
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold">
+              <DialogTitle className="text-base md:text-xl font-semibold">
                 Safahat Geçmişi
               </DialogTitle>
-              <DialogDescription className="text-base">
+              <DialogDescription className="text-xs md:text-sm">
                 {selectedCaseForDetail?.title} dosyasının safahat geçmişi
               </DialogDescription>
             </DialogHeader>
             
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {selectedCaseForDetail?.case_progress && selectedCaseForDetail.case_progress.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   {selectedCaseForDetail.case_progress
                     .sort((a, b) => new Date(a.progress_date).getTime() - new Date(b.progress_date).getTime())
                     .map((progress) => {
@@ -530,17 +569,17 @@ export default function MuvekkillerPage() {
                       const displayText = progressType ? progressType.label : progress.custom_description || 'Bilinmeyen'
                       
                       return (
-                        <div key={progress.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                        <div key={progress.id} className="border rounded-lg p-3 md:p-4 bg-white shadow-sm">
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex-1">
-                              <h4 className="font-medium text-gray-900">{displayText}</h4>
-                              <p className="text-sm text-gray-500">
+                              <h4 className="font-medium text-sm md:text-base text-gray-900">{displayText}</h4>
+                              <p className="text-xs md:text-sm text-gray-500 mt-0.5">
                                 {new Date(progress.progress_date).toLocaleDateString('tr-TR')}
                               </p>
                             </div>
                           </div>
                           {progress.notes && (
-                            <p className="text-sm text-gray-600 mt-2 bg-gray-50 p-2 rounded">
+                            <p className="text-xs md:text-sm text-gray-600 mt-2 bg-gray-50 p-2 rounded">
                               {progress.notes}
                             </p>
                           )}
@@ -549,10 +588,10 @@ export default function MuvekkillerPage() {
                     })}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <History className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Bu dosya için henüz safahat kaydı bulunmuyor</p>
-                  <p className="text-sm text-gray-400 mt-2">Dosyalar sayfasından safahat ekleyebilirsiniz</p>
+                <div className="text-center py-6 md:py-8">
+                  <History className="h-10 w-10 md:h-12 md:w-12 text-gray-400 mx-auto mb-3 md:mb-4" />
+                  <p className="text-sm md:text-base text-gray-500">Bu dosya için henüz safahat kaydı bulunmuyor</p>
+                  <p className="text-xs md:text-sm text-gray-400 mt-2">Dosyalar sayfasından safahat ekleyebilirsiniz</p>
                 </div>
               )}
             </div>
@@ -562,14 +601,14 @@ export default function MuvekkillerPage() {
 
       {/* Arama */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-3 md:p-6">
           <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-2.5 md:top-3 h-3 w-3 md:h-4 md:w-4 text-gray-400" />
             <Input
               placeholder="Ad soyad, TC kimlik no veya telefon ile ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-9 md:pl-10 text-sm md:text-base h-9 md:h-10"
             />
           </div>
         </CardContent>
@@ -577,82 +616,164 @@ export default function MuvekkillerPage() {
 
       {/* Müvekkil Listesi */}
       <Card>
-        <CardHeader>
-          <CardTitle>Müvekkil Listesi</CardTitle>
-          <CardDescription>
+        <CardHeader className="pb-3 md:pb-6">
+          <CardTitle className="text-base md:text-lg">Müvekkil Listesi</CardTitle>
+          <CardDescription className="text-xs md:text-sm">
             {filteredClients.length} müvekkil bulundu
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 md:p-6">
           {filteredClients.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ad Soyad</TableHead>
-                  <TableHead>TC Kimlik No</TableHead>
-                  <TableHead>Telefon</TableHead>
-                  <TableHead>E-posta</TableHead>
-                  <TableHead>Dosya Sayısı</TableHead>
-                  <TableHead>Kayıt Tarihi</TableHead>
-                  <TableHead>İşlemler</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.full_name}</TableCell>
-                    <TableCell>{client.tc_no || '-'}</TableCell>
-                    <TableCell>{client.phone || '-'}</TableCell>
-                    <TableCell>{client.email || '-'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {client.cases?.length || 0} dosya
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(client.created_at).toLocaleDateString('tr-TR')}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleShowClientInfo(client)}
-                          className="cursor-pointer"
-                          title="Dosyaları görüntüle"
-                        >
-                          <Info className="h-4 w-4" />
-                        </Button>
-                        {!isReadOnly && (
-                          <>
+            <>
+              {/* Desktop Tablo Görünümü */}
+              <div className="hidden lg:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Ad Soyad</TableHead>
+                      <TableHead>TC Kimlik No</TableHead>
+                      <TableHead>Telefon</TableHead>
+                      <TableHead>E-posta</TableHead>
+                      <TableHead>Dosya Sayısı</TableHead>
+                      <TableHead>Kayıt Tarihi</TableHead>
+                      <TableHead>İşlemler</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClients.map((client) => (
+                      <TableRow key={client.id}>
+                        <TableCell className="font-medium">{client.full_name}</TableCell>
+                        <TableCell>{client.tc_no || '-'}</TableCell>
+                        <TableCell>{client.phone || '-'}</TableCell>
+                        <TableCell>{client.email || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {client.cases?.length || 0} dosya
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(client.created_at).toLocaleDateString('tr-TR')}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => handleEditClient(client)}
+                              onClick={() => handleShowClientInfo(client)}
                               className="cursor-pointer"
+                              title="Dosyaları görüntüle"
                             >
-                              <Edit className="h-4 w-4" />
+                              <Info className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => handleDeleteClient(client.id)}
-                              className="cursor-pointer"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
+                            {!isReadOnly && (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleEditClient(client)}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleDeleteClient(client.id)}
+                                  className="cursor-pointer"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobil Kart Görünümü */}
+              <div className="lg:hidden space-y-3">
+                {filteredClients.map((client) => (
+                  <div key={client.id} className="border rounded-lg p-3 md:p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm md:text-base text-gray-900 truncate">
+                          {client.full_name}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-[10px] md:text-xs">
+                            {client.cases?.length || 0} dosya
+                          </Badge>
+                          <span className="text-[10px] md:text-xs text-gray-500">
+                            {new Date(client.created_at).toLocaleDateString('tr-TR')}
+                          </span>
+                        </div>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs md:text-sm mb-3">
+                      {client.tc_no && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 min-w-[60px]">TC:</span>
+                          <span className="text-gray-900">{client.tc_no}</span>
+                        </div>
+                      )}
+                      {client.phone && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 min-w-[60px]">Telefon:</span>
+                          <span className="text-gray-900">{client.phone}</span>
+                        </div>
+                      )}
+                      {client.email && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 min-w-[60px]">E-posta:</span>
+                          <span className="text-gray-900 truncate">{client.email}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 pt-2 border-t">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleShowClientInfo(client)}
+                        className="flex-1 text-xs"
+                      >
+                        <Info className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                        Dosyalar
+                      </Button>
+                      {!isReadOnly && (
+                        <>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleEditClient(client)}
+                            className="flex-1 text-xs"
+                          >
+                            <Edit className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                            Düzenle
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => handleDeleteClient(client.id)}
+                            className="px-2 md:px-3"
+                          >
+                            <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           ) : (
-            <div className="text-center py-8">
-              <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Henüz müvekkil bulunmuyor</p>
+            <div className="text-center py-6 md:py-8">
+              <User className="h-10 w-10 md:h-12 md:w-12 text-gray-400 mx-auto mb-3 md:mb-4" />
+              <p className="text-sm md:text-base text-gray-500">Henüz müvekkil bulunmuyor</p>
             </div>
           )}
         </CardContent>

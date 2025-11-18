@@ -430,8 +430,8 @@ export default function DilekcePage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dilekçe Oluştur</h1>
-          <p className="text-gray-600">Otomatik dilekçe oluşturun ve Word dosyası olarak indirin</p>
+          <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900 text-center md:text-left">Dilekçe Oluştur</h1>
+          <p className="text-gray-600 hidden md:block">Otomatik dilekçe oluşturun ve Word dosyası olarak indirin</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline">

@@ -70,20 +70,20 @@ function TaskCard({ task }: { task: Task }) {
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-white p-5 rounded-xl border border-gray-100 mb-3 cursor-grab active:cursor-grabbing hover:border-gray-300 hover:shadow-sm transition-all"
+      className="bg-white p-3 md:p-4 lg:p-5 rounded-lg md:rounded-xl border border-gray-100 mb-2 md:mb-3 cursor-grab active:cursor-grabbing hover:border-gray-300 hover:shadow-sm transition-all"
       {...attributes}
       {...listeners}
     >
-      <div className="flex items-start gap-3">
-        <GripVertical className="h-5 w-5 text-gray-300 mt-0.5 flex-shrink-0" />
-        <div className="flex-1 min-w-0 space-y-2">
-          <h4 className="font-semibold text-gray-900 leading-tight">{task.title}</h4>
+      <div className="flex items-start gap-2 md:gap-3">
+        <GripVertical className="h-4 w-4 md:h-5 md:w-5 text-gray-300 mt-0.5 flex-shrink-0" />
+        <div className="flex-1 min-w-0 space-y-1.5 md:space-y-2">
+          <h4 className="font-semibold text-sm md:text-base text-gray-900 leading-tight">{task.title}</h4>
           {task.description && (
-            <p className="text-sm text-gray-500 leading-relaxed">{task.description}</p>
+            <p className="text-xs md:text-sm text-gray-500 leading-relaxed">{task.description}</p>
           )}
           {task.due_date && (
-            <div className="pt-1">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-50 text-xs font-medium text-gray-600">
+            <div className="pt-0.5 md:pt-1">
+              <span className="inline-flex items-center px-2 md:px-2.5 py-0.5 md:py-1 rounded-md bg-gray-50 text-[10px] md:text-xs font-medium text-gray-600">
                 {new Date(task.due_date).toLocaleDateString('tr-TR')}
               </span>
             </div>
@@ -96,7 +96,7 @@ function TaskCard({ task }: { task: Task }) {
 
 function DroppableColumn({ id, children }: { id: string; children: React.ReactNode }) {
   const { setNodeRef } = useDroppable({ id })
-  return <div ref={setNodeRef} className="min-h-[500px]">{children}</div>
+  return <div ref={setNodeRef} className="min-h-[300px] md:min-h-[400px] lg:min-h-[500px]">{children}</div>
 }
 
 export default function IsTakipPage() {
@@ -366,11 +366,11 @@ export default function IsTakipPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">İş Takip</h1>
-          <p className="text-gray-600">Görevlerinizi yönetin ve takip edin</p>
+          <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900 text-center md:text-left">İş Takip</h1>
+          <p className="text-xs md:text-sm text-gray-600 mt-0.5 hidden md:block">Görevlerinizi yönetin ve takip edin</p>
         </div>
         <Dialog open={taskDialogOpen} onOpenChange={(open) => {
           setTaskDialogOpen(open)
@@ -381,48 +381,49 @@ export default function IsTakipPage() {
         }}>
           <DialogTrigger asChild>
             {!isReadOnly && (
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
-                Yeni Görev
+                <span className="hidden xs:inline">Yeni Görev</span>
+                <span className="xs:hidden">Ekle</span>
               </Button>
             )}
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="w-[95vw] sm:w-[90vw] md:max-w-lg max-h-[90vh] overflow-y-auto p-4 md:p-6">
             <DialogHeader>
-              <DialogTitle>{editingTask ? 'Görevi Düzenle' : 'Yeni Görev Ekle'}</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-base md:text-lg">{editingTask ? 'Görevi Düzenle' : 'Yeni Görev Ekle'}</DialogTitle>
+              <DialogDescription className="text-xs md:text-sm">
                 {editingTask ? 'Görev bilgilerini güncelleyin' : 'Yeni görev bilgilerini girin'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={editingTask ? handleUpdateTask : handleCreateTask} className="space-y-6">
+            <form onSubmit={editingTask ? handleUpdateTask : handleCreateTask} className="space-y-4 md:space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="title" className="text-sm font-medium text-gray-700">Görev Başlığı *</Label>
+                <Label htmlFor="title" className="text-xs md:text-sm font-medium text-gray-700">Görev Başlığı *</Label>
                 <Input
                   id="title"
                   value={taskForm.title}
                   onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
                   required
-                  className="h-11"
+                  className="h-9 md:h-11 text-sm md:text-base"
                   placeholder="Görev başlığı"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium text-gray-700">Açıklama</Label>
+                <Label htmlFor="description" className="text-xs md:text-sm font-medium text-gray-700">Açıklama</Label>
                 <Textarea
                   id="description"
                   value={taskForm.description}
                   onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
                   placeholder="Görev açıklaması (opsiyonel)"
-                  className="min-h-[100px]"
+                  className="min-h-[80px] md:min-h-[100px] text-sm md:text-base"
                 />
               </div>
 
               {!editingTask && (
                 <div className="space-y-2">
-                  <Label htmlFor="status" className="text-sm font-medium text-gray-700">Durum *</Label>
+                  <Label htmlFor="status" className="text-xs md:text-sm font-medium text-gray-700">Durum *</Label>
                   <Select value={taskForm.status} onValueChange={(value: 'todo' | 'in_progress' | 'done') => setTaskForm({ ...taskForm, status: value })}>
-                    <SelectTrigger className="h-11">
+                    <SelectTrigger className="h-9 md:h-11 text-sm md:text-base">
                       <SelectValue placeholder="Durum seçin" />
                     </SelectTrigger>
                     <SelectContent>
@@ -435,9 +436,9 @@ export default function IsTakipPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="case_id" className="text-sm font-medium text-gray-700">Dosya (Opsiyonel)</Label>
+                <Label htmlFor="case_id" className="text-xs md:text-sm font-medium text-gray-700">Dosya (Opsiyonel)</Label>
                 <Select value={taskForm.case_id || undefined} onValueChange={(value) => setTaskForm({ ...taskForm, case_id: value })}>
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger className="h-9 md:h-11 text-sm md:text-base">
                     <SelectValue placeholder="Dosya seçin (opsiyonel)" />
                   </SelectTrigger>
                   <SelectContent>
@@ -451,18 +452,18 @@ export default function IsTakipPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="due_date" className="text-sm font-medium text-gray-700">Bitiş Tarihi</Label>
+                <Label htmlFor="due_date" className="text-xs md:text-sm font-medium text-gray-700">Bitiş Tarihi</Label>
                 <Input
                   id="due_date"
                   type="date"
                   value={taskForm.due_date}
                   onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })}
-                  className="h-11"
+                  className="h-9 md:h-11 text-sm md:text-base"
                 />
               </div>
 
-              <div className="pt-4">
-                <Button type="submit" className="w-full h-11 text-base font-medium">
+              <div className="pt-2 md:pt-4">
+                <Button type="submit" className="w-full h-9 md:h-11 text-sm md:text-base font-medium">
                   {editingTask ? 'Güncelle' : 'Ekle'}
                 </Button>
               </div>
@@ -478,49 +479,49 @@ export default function IsTakipPage() {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 lg:gap-6">
           {statusColumns.map((column) => {
             const columnTasks = getTasksByStatus(column.id)
 
             return (
               <Card key={column.id} className={column.color}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+                <CardHeader className="pb-3 md:pb-4 lg:pb-6">
+                  <CardTitle className="flex items-center justify-between text-sm md:text-base">
                     <span>{column.label}</span>
-                    <Badge variant="secondary">{columnTasks.length}</Badge>
+                    <Badge variant="secondary" className="text-xs">{columnTasks.length}</Badge>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-3 md:p-4 lg:p-6">
                   <DroppableColumn id={column.id}>
                     <SortableContext items={columnTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
                       {columnTasks.map((task) => (
                         <div key={task.id} className="relative group">
                           <TaskCard task={task} />
                           {!isReadOnly && (
-                            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="absolute top-1.5 md:top-2 right-1.5 md:right-2 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 w-7 p-0 bg-white cursor-pointer"
+                                className="h-6 w-6 md:h-7 md:w-7 p-0 bg-white cursor-pointer"
                                 onClick={() => handleEditTask(task)}
                               >
-                                <Edit className="h-3 w-3" />
+                                <Edit className="h-2.5 w-2.5 md:h-3 md:w-3" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 w-7 p-0 bg-white cursor-pointer text-red-600"
+                                className="h-6 w-6 md:h-7 md:w-7 p-0 bg-white cursor-pointer text-red-600"
                                 onClick={() => handleDeleteTask(task.id)}
                               >
-                                <Trash2 className="h-3 w-3" />
+                                <Trash2 className="h-2.5 w-2.5 md:h-3 md:w-3" />
                               </Button>
                             </div>
                           )}
                         </div>
                       ))}
                       {columnTasks.length === 0 && (
-                        <div className="text-center py-12">
-                          <p className="text-gray-400 text-sm">Henüz görev yok</p>
+                        <div className="text-center py-8 md:py-12">
+                          <p className="text-gray-400 text-xs md:text-sm">Henüz görev yok</p>
                         </div>
                       )}
                     </SortableContext>
@@ -533,8 +534,8 @@ export default function IsTakipPage() {
 
         <DragOverlay>
           {activeId ? (
-            <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-blue-400">
-              <p className="font-medium">
+            <div className="bg-white p-3 md:p-4 rounded-lg shadow-lg border-2 border-blue-400 max-w-[250px] md:max-w-none">
+              <p className="font-medium text-sm md:text-base truncate">
                 {tasks.find(t => t.id === activeId)?.title}
               </p>
             </div>

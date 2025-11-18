@@ -9,14 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { TrendingUp, TrendingDown, Plus, Search, DollarSign, Info, Trash2 } from 'lucide-react'
+import { TrendingUp, TrendingDown, Plus, Search, DollarSign, Info, Trash2, Building2 } from 'lucide-react'
 import { supabaseBrowser } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useUserRole } from '@/hooks/useUserRole'
 
 interface Case {
   id: string
-  title: string
+  case_type: string
   case_no?: string
   client_id?: string
   court_name?: string
@@ -28,7 +28,7 @@ interface Case {
 
 interface IncomeExpense {
   id: string
-  case_id: string
+  case_id: string | null
   type: 'income' | 'expense'
   category: string
   amount: number
@@ -56,16 +56,16 @@ export default function GelirGiderPage() {
     category: '',
     amount: '',
     description: '',
-    transaction_date: new Date().toISOString().split('T')[0]
+    transaction_date: new Date().toISOString().split('T')[0],
+    isRelatedToCase: true
   })
 
   const sb = supabaseBrowser()
 
-  const expenseCategories = ['Bilirkişi Ücreti','Islah Harcı','Başvuru Harcı','Posta Masrafı','Vekalet Harcı ve Baro Pulu','Diğer Masraflar']
-  const incomeCategories = ['Sigorta Kısmi Ödeme','Karar Ödemesi']
-  const outgoingCategories = ['Müvekkile Kısmi Ödeme','Müvekkile Diğer Ödeme','Müvekkile Dosya Kapama Ödemesi','Kaportacı Komisyonu']
+  const incomeCategories = ['Müvekkil Ödemesi', 'Vekalet Ücreti', 'Diğer Gelir']
+  const expenseCategories = ['Dava Harcı', 'Islah Harcı', 'BK Ücreti', 'Keşif Harcı', 'Tebligat Giderleri', 'Ulaşım Giderleri', 'Kira', 'Elektrik', 'Su', 'İnternet', 'Kırtasiye', 'Personel Maaşı', 'Diğer Ofis Gideri', 'Diğer Giderler']
 
-  const allCategories = [...incomeCategories, ...expenseCategories, ...outgoingCategories]
+  const allCategories = [...incomeCategories, ...expenseCategories]
 
   useEffect(() => {
     void loadData()
@@ -89,18 +89,18 @@ export default function GelirGiderPage() {
     try {
       setLoading(true)
       const [casesResult, transactionsResult] = await Promise.all([
-        sb.from('cases')
-          .select(`id, title, case_no, client_id, court_name, client:clients(id, full_name)`) 
-          .order('title'),
-        sb.from('income_expenses')
-          .select(`id, case_id, type, category, amount, description, transaction_date, created_at, case:cases(id, title, case_no, client_id, court_name, client:clients(id, full_name))`)
+        sb.from('cases_2')
+          .select(`id, case_type, case_no, client_id, court_name, client:clients(id, full_name)`) 
+          .order('case_type'),
+        sb.from('income_expenses_2')
+          .select(`id, case_id, type, category, amount, description, transaction_date, created_at, case:cases_2(id, case_type, case_no, client_id, court_name, client:clients(id, full_name))`)
           .order('transaction_date', { ascending: false })
       ])
       const fetchedCases = (casesResult.data || []) as Array<Record<string, unknown>>
       setCases(
         fetchedCases.map((r) => ({
           id: String(r.id),
-          title: String(r.title),
+          case_type: String(r.case_type),
           case_no: r.case_no ? String(r.case_no) : undefined,
           client_id: r.client_id ? String(r.client_id) : undefined,
           court_name: r.court_name ? String(r.court_name) : undefined,
@@ -125,7 +125,7 @@ export default function GelirGiderPage() {
           const normalizedCase = rawCase
             ? {
                 id: String(rawCase.id as unknown),
-                title: String(rawCase.title as unknown),
+                case_type: String(rawCase.case_type as unknown),
                 case_no: rawCase.case_no ? String(rawCase.case_no as unknown) : undefined,
                 client_id: rawCase.client_id ? String(rawCase.client_id as unknown) : undefined,
                 court_name: rawCase.court_name ? String(rawCase.court_name as unknown) : undefined,
@@ -140,7 +140,7 @@ export default function GelirGiderPage() {
 
           return {
             id: String(r.id as unknown),
-            case_id: String(r.case_id as unknown),
+            case_id: r.case_id ? String(r.case_id as unknown) : null,
             type: r.type as 'income' | 'expense',
             category: String(r.category as unknown),
             amount: Number(r.amount),
@@ -166,34 +166,43 @@ export default function GelirGiderPage() {
       return matchesType && matchesCategory
     }
     
-    const q = normalizeTr(searchTerm)
-    const desc = normalizeTr(transaction.description || '')
-    const cat = normalizeTr(transaction.category || '')
-    const title = normalizeTr(transaction.case?.title || '')
-    const caseNo = normalizeTr(transaction.case?.case_no || '')
+    const q = searchTerm.toLowerCase().trim()
+    const desc = (transaction.description || '').toLowerCase()
+    const cat = (transaction.category || '').toLowerCase()
+    const caseType = normalizeTr(transaction.case?.case_type || '')
+    const caseNo = (transaction.case?.case_no || '').toLowerCase()
+    const courtName = normalizeTr(transaction.case?.court_name || '')
     const clientName = normalizeTr(transaction.case?.client?.full_name || '')
     const matchesSearch = desc.includes(q) ||
                          cat.includes(q) ||
-                         title.includes(q) ||
+                         caseType.includes(q) ||
                          caseNo.includes(q) ||
+                         courtName.includes(q) ||
                          clientName.includes(q)
     const matchesType = typeFilter === 'all' || transaction.type === typeFilter
     const matchesCategory = categoryFilter === 'all' || transaction.category === categoryFilter
     return matchesSearch && matchesType && matchesCategory
   })
 
-  const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((s,t)=>s+t.amount,0)
-  const totalExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((s,t)=>s+t.amount,0)
+  // Sadece dosyalı işlemlerin toplamı (Genel ofis hariç)
+  const totalIncome = filteredTransactions.filter(t => t.type === 'income' && t.case_id).reduce((s,t)=>s+t.amount,0)
+  const totalExpense = filteredTransactions.filter(t => t.type === 'expense' && t.case_id).reduce((s,t)=>s+t.amount,0)
   const netAmount = totalIncome - totalExpense
+  
+  // Genel ofis işlemlerinin ayrı toplamı
+  const generalOfficeIncome = filteredTransactions.filter(t => t.type === 'income' && !t.case_id).reduce((s,t)=>s+t.amount,0)
+  const generalOfficeExpense = filteredTransactions.filter(t => t.type === 'expense' && !t.case_id).reduce((s,t)=>s+t.amount,0)
+  const generalOfficeNet = generalOfficeIncome - generalOfficeExpense
 
   const groupedTransactions = filteredTransactions.reduce((groups, transaction) => {
-    const caseId = transaction.case_id
+    const caseId = transaction.case_id || 'genel_ofis'
     if (!groups[caseId]) {
       groups[caseId] = {
-        case: transaction.case!,
+        case: transaction.case || null,
         transactions: [],
         totalIncome: 0,
-        totalExpense: 0
+        totalExpense: 0,
+        isGeneralOffice: !transaction.case_id
       }
     }
     groups[caseId].transactions.push(transaction)
@@ -203,18 +212,31 @@ export default function GelirGiderPage() {
       groups[caseId].totalExpense += transaction.amount
     }
     return groups
-  }, {} as Record<string, {case: Case, transactions: IncomeExpense[], totalIncome: number, totalExpense: number}>)
+  }, {} as Record<string, {case: Case | null, transactions: IncomeExpense[], totalIncome: number, totalExpense: number, isGeneralOffice: boolean}>)
 
-  const handleShowCaseTransactions = (caseItem: Case) => {
-    const caseTransactions = transactions.filter(t => t.case_id === caseItem.id)
-    setSelectedCaseForTransaction({ case: caseItem, transactions: caseTransactions })
+  // Genel Ofis grubu yoksa ekle (boş bile olsa göster)
+  if (!groupedTransactions['genel_ofis']) {
+    groupedTransactions['genel_ofis'] = {
+      case: null,
+      transactions: [],
+      totalIncome: 0,
+      totalExpense: 0,
+      isGeneralOffice: true
+    }
+  }
+
+  const handleShowCaseTransactions = (caseItem: Case | null, isGeneralOffice: boolean) => {
+    const caseTransactions = isGeneralOffice 
+      ? transactions.filter(t => !t.case_id)
+      : transactions.filter(t => t.case_id === caseItem?.id)
+    setSelectedCaseForTransaction({ case: caseItem!, transactions: caseTransactions })
     setCaseTransactionDialogOpen(true)
   }
 
 
   const getCategoryOptions = () => {
     if (transactionForm.type === 'income') return incomeCategories
-    if (transactionForm.type === 'expense') return [...expenseCategories, ...outgoingCategories]
+    if (transactionForm.type === 'expense') return expenseCategories
     return []
   }
 
@@ -226,15 +248,20 @@ export default function GelirGiderPage() {
         toast.error('Giriş yapmanız gerekiyor')
         return
       }
-      const { error } = await sb.from('income_expenses').insert({
-        ...transactionForm,
+      
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { isRelatedToCase, ...formData } = transactionForm
+      
+      const { error } = await sb.from('income_expenses_2').insert({
+        ...formData,
+        case_id: isRelatedToCase && formData.case_id ? formData.case_id : null,
         amount: parseFloat(transactionForm.amount),
         created_by: user.id
       })
       if (error) throw error
       toast.success('İşlem başarıyla eklendi')
       setTransactionDialogOpen(false)
-      setTransactionForm({ case_id: '', type: 'income', category: '', amount: '', description: '', transaction_date: new Date().toISOString().split('T')[0] })
+      setTransactionForm({ case_id: '', type: 'income', category: '', amount: '', description: '', transaction_date: new Date().toISOString().split('T')[0], isRelatedToCase: true })
       void loadData()
     } catch {
       toast.error('İşlem eklenemedi')
@@ -246,7 +273,7 @@ export default function GelirGiderPage() {
     const confirmed = window.confirm('Bu işlemi silmek istediğinize emin misiniz?')
     if (!confirmed) return
     try {
-      const { error } = await sb.from('income_expenses').delete().eq('id', transactionId)
+      const { error } = await sb.from('income_expenses_2').delete().eq('id', transactionId)
       if (error) throw error
       toast.success('İşlem silindi')
       // UI state güncelle
@@ -271,55 +298,69 @@ export default function GelirGiderPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900 text-center md:text-left">Gelir-Gider Takibi</h1>
-          <p className="text-xs md:text-sm text-gray-600 hidden md:block">Dosya gelir ve giderlerini takip edin</p>
+          <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-900 text-center md:text-left">Ofis Gelir-Gider Takibi</h1>
+          <p className="text-xs md:text-sm text-gray-600 hidden md:block">Dosya ve genel ofis gelir-giderlerini takip edin</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={transactionDialogOpen} onOpenChange={(open) => {
             setTransactionDialogOpen(open)
             if (!open) {
-              setTransactionForm({ case_id: '', type: 'income', category: '', amount: '', description: '', transaction_date: new Date().toISOString().split('T')[0] })
+              setTransactionForm({ case_id: '', type: 'income', category: '', amount: '', description: '', transaction_date: new Date().toISOString().split('T')[0], isRelatedToCase: true })
             }
           }}>
             <DialogTrigger asChild>
               {!isReadOnly && (
                 <Button className="w-full sm:w-auto">
                   <Plus className="h-3 w-3 md:h-4 md:w-4 mr-2" />
-                  <span className="hidden xs:inline">Yeni İşlem</span>
-                  <span className="xs:hidden">Ekle</span>
+                  <span className="text-xs md:text-sm">Yeni İşlem</span>
                 </Button>
               )}
             </DialogTrigger>
             <DialogContent className="w-[95vw] sm:w-[90vw] md:max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-base md:text-lg">Yeni İşlem Ekle</DialogTitle>
-                <DialogDescription className="text-xs md:text-sm">Bu dosyaya gelir/gider işlemi ekleyin</DialogDescription>
+                <DialogDescription className="text-xs md:text-sm">Dosya veya genel ofis gelir/gider işlemi ekleyin</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateTransaction} className="space-y-4 md:space-y-6">
-                <div className="space-y-2">
-                  <Label className="text-xs md:text-sm font-medium text-gray-700">Dosya *</Label>
-                  <Select value={transactionForm.case_id} onValueChange={(value) => setTransactionForm({ ...transactionForm, case_id: value })}>
-                    <SelectTrigger className="h-9 md:h-11 text-sm md:text-base">
-                      <SelectValue placeholder="Dosya seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cases.map((caseItem) => {
-                        const isCourtCase = caseItem.title === 'Mahrumiyet İcra Dosyası'
-                        const displayText = isCourtCase && caseItem.court_name
-                          ? `${caseItem.court_name} ${caseItem.case_no ? `(${caseItem.case_no})` : ''}`
-                          : `${caseItem.title} ${caseItem.case_no ? `(${caseItem.case_no})` : ''} ${caseItem.client?.full_name ? `- ${caseItem.client.full_name}` : ''}`
-                        return (
-                          <SelectItem key={caseItem.id} value={caseItem.id}>{displayText}</SelectItem>
-                        )
-                      })}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border">
+                  <input
+                    type="checkbox"
+                    id="isRelatedToCase"
+                    checked={transactionForm.isRelatedToCase}
+                    onChange={(e) => setTransactionForm({ 
+                      ...transactionForm, 
+                      isRelatedToCase: e.target.checked,
+                      case_id: e.target.checked ? transactionForm.case_id : ''
+                    })}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="isRelatedToCase" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    Bu işlem bir dosya ile ilişkili
+                  </Label>
                 </div>
+                {transactionForm.isRelatedToCase && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">Dosya *</Label>
+                    <Select value={transactionForm.case_id} onValueChange={(value) => setTransactionForm({ ...transactionForm, case_id: value })}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Dosya seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cases.map((caseItem) => {
+                          const displayText = `${caseItem.court_name || 'Mahkeme belirtilmemiş'} - ${caseItem.case_no || 'Esas yok'}`
+                          return (
+                            <SelectItem key={caseItem.id} value={caseItem.id}>{displayText}</SelectItem>
+                          )
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs md:text-sm font-medium text-gray-700">İşlem Türü *</Label>
+                    <Label className="text-sm font-medium text-gray-700">İşlem Türü *</Label>
                     <Select value={transactionForm.type} onValueChange={(value: 'income' | 'expense') => setTransactionForm({ ...transactionForm, type: value, category: '' })}>
-                      <SelectTrigger className="h-9 md:h-11 text-sm md:text-base">
+                      <SelectTrigger className="h-11">
                         <SelectValue placeholder="İşlem türünü seçin" />
                       </SelectTrigger>
                       <SelectContent>
@@ -329,9 +370,9 @@ export default function GelirGiderPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs md:text-sm font-medium text-gray-700">Kategori *</Label>
+                    <Label className="text-sm font-medium text-gray-700">Kategori *</Label>
                     <Select value={transactionForm.category} onValueChange={(value) => setTransactionForm({ ...transactionForm, category: value })}>
-                      <SelectTrigger className="h-9 md:h-11 text-sm md:text-base">
+                      <SelectTrigger className="h-11">
                         <SelectValue placeholder="Kategori seçin" />
                       </SelectTrigger>
                       <SelectContent>
@@ -344,20 +385,20 @@ export default function GelirGiderPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs md:text-sm font-medium text-gray-700">Tutar (TL) *</Label>
-                    <Input type="number" value={transactionForm.amount} onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })} className="h-9 md:h-11 text-sm md:text-base" placeholder="0.00" step="0.01" min="0" required />
+                    <Label className="text-sm font-medium text-gray-700">Tutar (TL) *</Label>
+                    <Input type="number" value={transactionForm.amount} onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })} className="h-11" placeholder="0.00" step="0.01" min="0" required />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs md:text-sm font-medium text-gray-700">İşlem Tarihi *</Label>
-                    <Input type="date" value={transactionForm.transaction_date} onChange={(e) => setTransactionForm({ ...transactionForm, transaction_date: e.target.value })} className="h-9 md:h-11 text-sm md:text-base" required />
+                    <Label className="text-sm font-medium text-gray-700">İşlem Tarihi *</Label>
+                    <Input type="date" value={transactionForm.transaction_date} onChange={(e) => setTransactionForm({ ...transactionForm, transaction_date: e.target.value })} className="h-11" required />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs md:text-sm font-medium text-gray-700">Açıklama</Label>
-                  <Textarea value={transactionForm.description} onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })} placeholder="İşlem açıklaması (opsiyonel)" className="min-h-[80px] md:min-h-[100px] text-sm md:text-base" />
+                  <Label className="text-sm font-medium text-gray-700">Açıklama</Label>
+                  <Textarea value={transactionForm.description} onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })} placeholder="İşlem açıklaması (opsiyonel)" className="min-h-[100px]" />
                 </div>
                 <div className="pt-2">
-                  <Button type="submit" className="w-full h-9 md:h-11 text-sm md:text-base font-medium">İşlemi Kaydet</Button>
+                  <Button type="submit" className="w-full h-11 text-base font-medium">İşlemi Kaydet</Button>
                 </div>
               </form>
             </DialogContent>
@@ -365,7 +406,7 @@ export default function GelirGiderPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
         <Card>
           <CardContent className="p-3 md:p-6">
             <div className="flex items-center gap-2 md:gap-0">
@@ -373,7 +414,7 @@ export default function GelirGiderPage() {
                 <TrendingUp className="h-4 w-4 md:h-6 md:w-6 text-green-600" />
               </div>
               <div className="md:ml-4 min-w-0 flex-1">
-                <p className="text-[10px] md:text-sm font-medium text-gray-600 truncate">Toplam Gelir</p>
+                <p className="text-[10px] md:text-sm font-medium text-gray-600 truncate">Dosya Geliri</p>
                 <p className="text-sm md:text-2xl font-bold text-green-600 truncate">{totalIncome.toLocaleString('tr-TR')} TL</p>
               </div>
             </div>
@@ -386,21 +427,34 @@ export default function GelirGiderPage() {
                 <TrendingDown className="h-4 w-4 md:h-6 md:w-6 text-red-600" />
               </div>
               <div className="md:ml-4 min-w-0 flex-1">
-                <p className="text-[10px] md:text-sm font-medium text-gray-600 truncate">Toplam Gider</p>
+                <p className="text-[10px] md:text-sm font-medium text-gray-600 truncate">Dosya Gideri</p>
                 <p className="text-sm md:text-2xl font-bold text-red-600 truncate">{totalExpense.toLocaleString('tr-TR')} TL</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="col-span-2 lg:col-span-1">
+        <Card>
           <CardContent className="p-3 md:p-6">
             <div className="flex items-center gap-2 md:gap-0">
               <div className={`p-2 md:p-3 rounded-lg flex-shrink-0 ${netAmount >= 0 ? 'bg-blue-100' : 'bg-orange-100'}`}>
                 <DollarSign className={`h-4 w-4 md:h-6 md:w-6 ${netAmount >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
               </div>
               <div className="md:ml-4 min-w-0 flex-1">
-                <p className="text-[10px] md:text-sm font-medium text-gray-600 truncate">Net Tutar</p>
+                <p className="text-[10px] md:text-sm font-medium text-gray-600 truncate">Dosya Net</p>
                 <p className={`text-sm md:text-2xl font-bold truncate ${netAmount >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>{netAmount.toLocaleString('tr-TR')} TL</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white">
+          <CardContent className="p-3 md:p-6">
+            <div className="flex items-center gap-2 md:gap-0">
+              <div className="p-2 md:p-3 rounded-lg bg-purple-100 flex-shrink-0">
+                <Building2 className="h-4 w-4 md:h-6 md:w-6 text-purple-600" />
+              </div>
+              <div className="md:ml-4 min-w-0 flex-1">
+                <p className="text-[10px] md:text-sm font-medium text-gray-600 truncate">Genel Ofis Net</p>
+                <p className={`text-sm md:text-2xl font-bold truncate ${generalOfficeNet >= 0 ? 'text-purple-600' : 'text-red-600'}`}>{generalOfficeNet.toLocaleString('tr-TR')} TL</p>
               </div>
             </div>
           </CardContent>
@@ -414,7 +468,7 @@ export default function GelirGiderPage() {
               <Label htmlFor="search" className="text-xs md:text-sm">Ara</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 md:top-3 h-3 w-3 md:h-4 md:w-4 text-gray-400" />
-                <Input id="search" placeholder="Açıklama, kategori, dosya başlığı..." value={searchTerm} onChange={(e)=>setSearchTerm(e.target.value)} className="pl-9 md:pl-10 h-9 md:h-10 text-sm md:text-base" />
+                <Input id="search" placeholder="Açıklama, kategori, mahkeme, esas no, müvekkil..." value={searchTerm} onChange={(e)=>setSearchTerm(e.target.value)} className="pl-9 md:pl-10 h-9 md:h-10 text-sm md:text-base" />
               </div>
             </div>
             <div className="w-full md:w-32">
@@ -466,31 +520,37 @@ export default function GelirGiderPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Object.values(groupedTransactions).map((group) => {
+                    {Object.values(groupedTransactions)
+                      .sort((a, b) => {
+                        // Genel Ofis her zaman en üstte
+                        if (a.isGeneralOffice) return -1
+                        if (b.isGeneralOffice) return 1
+                        return 0
+                      })
+                      .map((group, idx) => {
                       const netCaseAmount = group.totalIncome - group.totalExpense
-                      const isCourtCase = group.case.title === 'Mahrumiyet İcra Dosyası'
                       return (
-                        <TableRow key={group.case.id}>
+                        <TableRow key={group.case?.id || `genel_ofis_${idx}`}>
                           <TableCell>
                             <div>
-                              {isCourtCase && group.case.court_name ? (
+                              {group.isGeneralOffice ? (
                                 <>
-                                  <p className="font-medium">{group.case.title}</p>
-                                  <p className="font-medium text-blue-600">{group.case.court_name}</p>
-                                  {group.case.case_no && (
-                                    <p className="text-sm text-gray-500">{group.case.case_no}</p>
-                                  )}
-                                  {group.case.client?.full_name && (
-                                    <p className="text-sm text-gray-500">{group.case.client.full_name}</p>
-                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <Building2 className="h-4 w-4 text-purple-600" />
+                                    <p className="font-medium text-purple-600">Genel Ofis</p>
+                                  </div>
+                                  <p className="text-sm text-gray-500">Dosya ile ilişkisiz işlemler</p>
                                 </>
                               ) : (
                                 <>
-                                  <p className="font-medium">{group.case.title}</p>
-                                  {group.case.case_no && (
-                                    <p className="text-sm text-gray-500">{group.case.case_no}</p>
+                                  <p className="font-medium">{group.case?.case_type}</p>
+                                  {group.case?.court_name && (
+                                    <p className="font-medium text-blue-600">{group.case.court_name}</p>
                                   )}
-                                  {group.case.client?.full_name && (
+                                  {group.case?.case_no && (
+                                    <p className="text-sm text-gray-500">Esas: {group.case.case_no}</p>
+                                  )}
+                                  {group.case?.client?.full_name && (
                                     <p className="text-sm text-gray-500">{group.case.client.full_name}</p>
                                   )}
                                 </>
@@ -514,7 +574,7 @@ export default function GelirGiderPage() {
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={() => handleShowCaseTransactions(group.case)}
+                                onClick={() => handleShowCaseTransactions(group.case, group.isGeneralOffice)}
                                 className="cursor-pointer"
                                 title="İşlem detaylarını görüntüle"
                               >
@@ -525,18 +585,33 @@ export default function GelirGiderPage() {
                                   size="sm" 
                                   variant="outline"
                                   onClick={() => {
-                                    setTransactionForm({
-                                      case_id: group.case.id,
-                                      type: 'income',
-                                      category: '',
-                                      amount: '',
-                                      description: '',
-                                      transaction_date: new Date().toISOString().split('T')[0]
-                                    })
+                                    if (group.isGeneralOffice) {
+                                      // Genel ofis için
+                                      setTransactionForm({
+                                        case_id: '',
+                                        type: 'income',
+                                        category: '',
+                                        amount: '',
+                                        description: '',
+                                        transaction_date: new Date().toISOString().split('T')[0],
+                                        isRelatedToCase: false
+                                      })
+                                    } else {
+                                      // Dosya için
+                                      setTransactionForm({
+                                        case_id: group.case?.id || '',
+                                        type: 'income',
+                                        category: '',
+                                        amount: '',
+                                        description: '',
+                                        transaction_date: new Date().toISOString().split('T')[0],
+                                        isRelatedToCase: true
+                                      })
+                                    }
                                     setTransactionDialogOpen(true)
                                   }}
                                   className="cursor-pointer"
-                                  title="Bu dosyaya işlem ekle"
+                                  title={group.isGeneralOffice ? "Genel ofis işlemi ekle" : "Bu dosyaya işlem ekle"}
                                 >
                                   <Plus className="h-4 w-4" />
                                 </Button>
@@ -552,30 +627,36 @@ export default function GelirGiderPage() {
 
               {/* Mobile Card View */}
               <div className="lg:hidden space-y-3">
-                {Object.values(groupedTransactions).map((group) => {
+                {Object.values(groupedTransactions)
+                  .sort((a, b) => {
+                    // Genel Ofis her zaman en üstte
+                    if (a.isGeneralOffice) return -1
+                    if (b.isGeneralOffice) return 1
+                    return 0
+                  })
+                  .map((group, idx) => {
                   const netCaseAmount = group.totalIncome - group.totalExpense
-                  const isCourtCase = group.case.title === 'Mahrumiyet İcra Dosyası'
                   return (
-                    <div key={group.case.id} className="border rounded-lg p-3 md:p-4 space-y-3">
+                    <div key={group.case?.id || `genel_ofis_${idx}`} className="border rounded-lg p-3 md:p-4 space-y-3">
                       <div>
-                        {isCourtCase && group.case.court_name ? (
+                        {group.isGeneralOffice ? (
                           <>
-                            <p className="font-medium text-sm md:text-base">{group.case.title}</p>
-                            <p className="font-medium text-blue-600 text-xs md:text-sm">{group.case.court_name}</p>
-                            {group.case.case_no && (
-                              <p className="text-[10px] md:text-xs text-gray-500">{group.case.case_no}</p>
-                            )}
-                            {group.case.client?.full_name && (
-                              <p className="text-[10px] md:text-xs text-gray-500">{group.case.client.full_name}</p>
-                            )}
+                            <div className="flex items-center gap-2 mb-1">
+                              <Building2 className="h-4 w-4 text-purple-600" />
+                              <p className="font-medium text-sm md:text-base text-purple-600">Genel Ofis</p>
+                            </div>
+                            <p className="text-[10px] md:text-xs text-gray-500">Dosya ile ilişkisiz işlemler</p>
                           </>
                         ) : (
                           <>
-                            <p className="font-medium text-sm md:text-base">{group.case.title}</p>
-                            {group.case.case_no && (
-                              <p className="text-[10px] md:text-xs text-gray-500">{group.case.case_no}</p>
+                            <p className="font-medium text-sm md:text-base">{group.case?.case_type}</p>
+                            {group.case?.court_name && (
+                              <p className="font-medium text-blue-600 text-xs md:text-sm">{group.case.court_name}</p>
                             )}
-                            {group.case.client?.full_name && (
+                            {group.case?.case_no && (
+                              <p className="text-[10px] md:text-xs text-gray-500">Esas: {group.case.case_no}</p>
+                            )}
+                            {group.case?.client?.full_name && (
                               <p className="text-[10px] md:text-xs text-gray-500">{group.case.client.full_name}</p>
                             )}
                           </>
@@ -602,7 +683,7 @@ export default function GelirGiderPage() {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => handleShowCaseTransactions(group.case)}
+                          onClick={() => handleShowCaseTransactions(group.case, group.isGeneralOffice)}
                           className="flex-1 text-xs md:text-sm"
                           title="İşlem detaylarını görüntüle"
                         >
@@ -614,18 +695,33 @@ export default function GelirGiderPage() {
                             size="sm" 
                             variant="outline"
                             onClick={() => {
-                              setTransactionForm({
-                                case_id: group.case.id,
-                                type: 'income',
-                                category: '',
-                                amount: '',
-                                description: '',
-                                transaction_date: new Date().toISOString().split('T')[0]
-                              })
+                              if (group.isGeneralOffice) {
+                                // Genel ofis için
+                                setTransactionForm({
+                                  case_id: '',
+                                  type: 'income',
+                                  category: '',
+                                  amount: '',
+                                  description: '',
+                                  transaction_date: new Date().toISOString().split('T')[0],
+                                  isRelatedToCase: false
+                                })
+                              } else {
+                                // Dosya için
+                                setTransactionForm({
+                                  case_id: group.case?.id || '',
+                                  type: 'income',
+                                  category: '',
+                                  amount: '',
+                                  description: '',
+                                  transaction_date: new Date().toISOString().split('T')[0],
+                                  isRelatedToCase: true
+                                })
+                              }
                               setTransactionDialogOpen(true)
                             }}
                             className="flex-1 text-xs md:text-sm"
-                            title="Bu dosyaya işlem ekle"
+                            title={group.isGeneralOffice ? "Genel ofis işlemi ekle" : "Bu dosyaya işlem ekle"}
                           >
                             <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                             İşlem Ekle
@@ -650,84 +746,107 @@ export default function GelirGiderPage() {
       <Dialog open={caseTransactionDialogOpen} onOpenChange={setCaseTransactionDialogOpen}>
         <DialogContent className="w-[95vw] sm:w-[90vw] md:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0 p-3 md:p-6">
-            <DialogTitle className="text-base md:text-xl font-semibold">
-              {selectedCaseForTransaction?.case.title} - İşlem Detayları
+            <DialogTitle className="text-base md:text-xl font-semibold flex items-center gap-2">
+              {selectedCaseForTransaction?.case 
+                ? `${selectedCaseForTransaction.case.case_type} - İşlem Detayları`
+                : (
+                  <>
+                    <Building2 className="h-5 w-5 text-purple-600" />
+                    <span>Genel Ofis - İşlem Detayları</span>
+                  </>
+                )
+              }
             </DialogTitle>
             <DialogDescription className="text-xs md:text-sm">
-              Bu dosyaya ait tüm gelir-gider işlemleri
+              {selectedCaseForTransaction?.case 
+                ? 'Bu dosyaya ait tüm gelir-gider işlemleri'
+                : 'Dosya ile ilişkilendirilmemiş genel ofis işlemleri'
+              }
             </DialogDescription>
           </DialogHeader>
           {selectedCaseForTransaction && (
             <div className="flex-1 min-h-0 flex flex-col space-y-3 md:space-y-4 p-3 md:p-6 pt-0">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 p-3 md:p-4 bg-gray-50 rounded-lg flex-shrink-0">
+                {selectedCaseForTransaction.case ? (
+                  <>
                 <div className="text-center">
-                  <p className="text-[10px] md:text-xs text-gray-500 mb-1">Dosya No</p>
-                  <p className="font-semibold text-xs md:text-sm truncate">{selectedCaseForTransaction?.case.case_no || 'Belirtilmemiş'}</p>
+                  <p className="text-[10px] md:text-xs text-gray-500 mb-1">Esas No</p>
+                  <p className="font-semibold text-xs md:text-sm truncate">{selectedCaseForTransaction.case.case_no || 'Belirtilmemiş'}</p>
                 </div>
-                {selectedCaseForTransaction?.case.title === 'Mahrumiyet İcra Dosyası' && selectedCaseForTransaction?.case.court_name && (
+                {selectedCaseForTransaction.case.court_name && (
                   <div className="text-center">
                     <p className="text-[10px] md:text-xs text-gray-500 mb-1">Mahkeme</p>
-                    <p className="font-semibold text-xs md:text-sm text-blue-600 truncate">{selectedCaseForTransaction?.case.court_name}</p>
+                    <p className="font-semibold text-xs md:text-sm text-blue-600 truncate">{selectedCaseForTransaction.case.court_name}</p>
                   </div>
                 )}
-                <div className="text-center">
-                  <p className="text-[10px] md:text-xs text-gray-500 mb-1">İşlem Sayısı</p>
-                  <p className="font-semibold text-xs md:text-sm">{selectedCaseForTransaction?.transactions.length ?? 0}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[10px] md:text-xs text-gray-500 mb-1">Toplam Gelir</p>
-                  <p className="font-semibold text-xs md:text-sm text-green-600 truncate">
-                    {(selectedCaseForTransaction?.transactions || []).filter(t => t.type === 'income').reduce((s,t)=>s+t.amount,0).toLocaleString('tr-TR')} TL
-                  </p>
-                </div>
-                <div className="text-center col-span-2 md:col-span-1">
-                  <p className="text-[10px] md:text-xs text-gray-500 mb-1">Toplam Gider</p>
-                  <p className="font-semibold text-xs md:text-sm text-red-600 truncate">
-                    {(selectedCaseForTransaction?.transactions || []).filter(t => t.type === 'expense').reduce((s,t)=>s+t.amount,0).toLocaleString('tr-TR')} TL
-                  </p>
+              </>
+            ) : (
+              <div className="text-center">
+                <p className="text-[10px] md:text-xs text-gray-500 mb-1">Tür</p>
+                <div className="flex items-center justify-center gap-1.5">
+                  <Building2 className="h-4 w-4 text-purple-600" />
+                  <p className="font-semibold text-xs md:text-sm text-purple-600">Genel Ofis</p>
                 </div>
               </div>
-              <div className="flex-1 min-h-0 overflow-hidden border rounded-lg">
-                <div className="max-h-[50vh] md:max-h-[55vh] overflow-y-auto">
-                  <div className="space-y-2 md:space-y-3 p-2 md:p-4">
-                    {(selectedCaseForTransaction?.transactions || []).map((transaction) => (
-                      <div key={transaction.id} className="bg-white border rounded-lg p-3 md:p-4 hover:shadow-sm transition-shadow">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <Badge variant={transaction.type === 'income' ? 'default' : 'destructive'} className="text-[10px] md:text-xs">
-                                {transaction.type === 'income' ? 'Gelir' : 'Gider'}
-                              </Badge>
-                              <Badge variant="outline" className="text-[10px] md:text-xs">
-                                {transaction.category}
-                              </Badge>
-                              <span className="text-[10px] md:text-xs text-gray-500">{new Date(transaction.transaction_date).toLocaleDateString('tr-TR')}</span>
-                            </div>
-                            {transaction.description && (
-                              <p className="text-xs md:text-sm text-gray-700 mb-2 leading-relaxed">{transaction.description}</p>
-                            )}
-                            <div className="flex items-center justify-between">
-                              <span className={`font-semibold text-sm md:text-lg ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                                {transaction.amount.toLocaleString('tr-TR')} TL
-                              </span>
-                            </div>
-                          </div>
-                          {!isReadOnly && (
-                            <div className="flex-shrink-0">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 md:h-9 md:w-9"
-                                title="İşlemi sil"
-                                onClick={() => handleDeleteTransaction(transaction.id)}
-                              >
-                                <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
-                              </Button>
-                            </div>
-                          )}
+            )}
+            <div className="text-center">
+              <p className="text-[10px] md:text-xs text-gray-500 mb-1">İşlem Sayısı</p>
+              <p className="font-semibold text-xs md:text-sm">{selectedCaseForTransaction?.transactions.length ?? 0}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] md:text-xs text-gray-500 mb-1">Toplam Gelir</p>
+              <p className="font-semibold text-xs md:text-sm text-green-600 truncate">
+                {(selectedCaseForTransaction?.transactions || []).filter(t => t.type === 'income').reduce((s,t)=>s+t.amount,0).toLocaleString('tr-TR')} TL
+              </p>
+            </div>
+            <div className="text-center col-span-2 md:col-span-1">
+              <p className="text-[10px] md:text-xs text-gray-500 mb-1">Toplam Gider</p>
+              <p className="font-semibold text-xs md:text-sm text-red-600 truncate">
+                {(selectedCaseForTransaction?.transactions || []).filter(t => t.type === 'expense').reduce((s,t)=>s+t.amount,0).toLocaleString('tr-TR')} TL
+              </p>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden border rounded-lg">
+            <div className="max-h-[50vh] md:max-h-[55vh] overflow-y-auto">
+              <div className="space-y-2 md:space-y-3 p-2 md:p-4">
+                {(selectedCaseForTransaction?.transactions || []).map((transaction) => (
+                  <div key={transaction.id} className="bg-white border rounded-lg p-3 md:p-4 hover:shadow-sm transition-shadow">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <Badge variant={transaction.type === 'income' ? 'default' : 'destructive'} className="text-[10px] md:text-xs">
+                            {transaction.type === 'income' ? 'Gelir' : 'Gider'}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px] md:text-xs">
+                            {transaction.category}
+                          </Badge>
+                          <span className="text-[10px] md:text-xs text-gray-500">{new Date(transaction.transaction_date).toLocaleDateString('tr-TR')}</span>
+                        </div>
+                        {transaction.description && (
+                          <p className="text-xs md:text-sm text-gray-700 mb-2 leading-relaxed">{transaction.description}</p>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <span className={`font-semibold text-sm md:text-lg ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                            {transaction.amount.toLocaleString('tr-TR')} TL
+                          </span>
                         </div>
                       </div>
-                    ))}
+                      {!isReadOnly && (
+                        <div className="flex-shrink-0">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 md:h-9 md:w-9"
+                            title="İşlemi sil"
+                            onClick={() => handleDeleteTransaction(transaction.id)}
+                          >
+                            <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
                   </div>
                 </div>
               </div>
