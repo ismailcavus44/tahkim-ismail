@@ -929,22 +929,6 @@ export default function DosyalarPage() {
               </Select>
             </div>
 
-            {progressForm.progress_type === 'diğer' && (
-              <div className="space-y-2">
-                <Label htmlFor="custom_description" className="text-sm font-medium text-gray-700">
-                  Açıklama *
-                </Label>
-                <Input
-                  id="custom_description"
-                  value={progressForm.custom_description}
-                  onChange={(e) => setProgressForm({...progressForm, custom_description: e.target.value})}
-                  required
-                  className="h-11"
-                  placeholder="Özel safahat açıklaması"
-                />
-              </div>
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="progress_date" className="text-sm font-medium text-gray-700">
                 Tarih *
