@@ -169,7 +169,7 @@ export default function DosyalarPage() {
       const progressData = {
         case_id: selectedCaseForProgress.id,
         progress_type: progressForm.progress_type,
-        custom_description: progressForm.progress_type === 'diğer' ? progressForm.custom_description : null,
+        custom_description: null,
         progress_date: progressForm.progress_date,
         notes: progressForm.notes || null,
         created_by: user.id

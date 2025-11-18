@@ -249,7 +249,6 @@ export default function GelirGiderPage() {
         return
       }
       
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { isRelatedToCase, ...formData } = transactionForm
       
       const { error } = await sb.from('income_expenses_2').insert({
